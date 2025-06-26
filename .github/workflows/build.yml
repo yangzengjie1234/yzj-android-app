@@ -78,11 +78,22 @@ jobs:
     
     - name: Setup Android SDK
       run: |
+        set -e  # Exit on any error
+        
+        echo "Setting up Android SDK..."
+        
         # 下载Android命令行工具
-        wget -q https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip
+        echo "Downloading Android command line tools..."
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip || {
+          echo "Failed to download Android command line tools"
+          exit 1
+        }
+        
+        echo "Extracting command line tools..."
         unzip -q commandlinetools-linux-8512546_latest.zip
         
         # 创建Android SDK目录结构
+        echo "Setting up Android SDK directory structure..."
         mkdir -p $HOME/android-sdk/cmdline-tools
         mv cmdline-tools $HOME/android-sdk/cmdline-tools/latest
         
@@ -92,12 +103,31 @@ jobs:
         echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
         echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
         
+        # 验证sdkmanager可用性
+        echo "Verifying sdkmanager..."
+        $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --version
+        
         # 接受许可证
-        yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
+        echo "Accepting Android SDK licenses..."
+        yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses || {
+          echo "Failed to accept licenses"
+          exit 1
+        }
         
         # 安装必要的Android组件
-        $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-31" "build-tools;31.0.0"
-        $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager "ndk;25.2.9519653"
+        echo "Installing Android SDK components..."
+        $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-31" "build-tools;31.0.0" || {
+          echo "Failed to install basic Android components"
+          exit 1
+        }
+        
+        echo "Installing Android NDK..."
+        $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager "ndk;25.2.9519653" || {
+          echo "Failed to install NDK"
+          exit 1
+        }
+        
+        echo "Android SDK setup completed successfully"
     
     - name: Verify buildozer.spec
       run: |
@@ -108,12 +138,69 @@ jobs:
     - name: Build APK (Debug)
       if: github.event.inputs.build_type == 'debug' || github.event.inputs.build_type == ''
       run: |
-        buildozer android debug
+        set -e
+        echo "Starting debug APK build..."
+        
+        # 显示环境信息
+        echo "=== Environment Information ==="
+        echo "ANDROID_HOME: $ANDROID_HOME"
+        echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+        echo "PATH: $PATH"
+        echo "Java version: $(java -version 2>&1)"
+        echo "Python version: $(python --version)"
+        echo "Buildozer version: $(buildozer version)"
+        echo "=============================="
+        
+        # 清理之前的构建
+        echo "Cleaning previous builds..."
+        buildozer android clean || echo "Clean failed, continuing..."
+        
+        # 开始构建
+        echo "Building debug APK..."
+        buildozer android debug -v || {
+          echo "Build failed, showing buildozer log..."
+          if [ -f .buildozer/logs/buildozer.log ]; then
+            echo "=== Buildozer Log ==="
+            tail -50 .buildozer/logs/buildozer.log
+            echo "==================="
+          fi
+          exit 1
+        }
+        
+        echo "Debug APK build completed successfully"
     
     - name: Build APK (Release)
       if: github.event.inputs.build_type == 'release'
       run: |
-        buildozer android release
+        set -e
+        echo "Starting release APK build..."
+        
+        # 显示环境信息
+        echo "=== Environment Information ==="
+        echo "ANDROID_HOME: $ANDROID_HOME"
+        echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+        echo "Java version: $(java -version 2>&1)"
+        echo "Python version: $(python --version)"
+        echo "Buildozer version: $(buildozer version)"
+        echo "=============================="
+        
+        # 清理之前的构建
+        echo "Cleaning previous builds..."
+        buildozer android clean || echo "Clean failed, continuing..."
+        
+        # 开始构建
+        echo "Building release APK..."
+        buildozer android release -v || {
+          echo "Build failed, showing buildozer log..."
+          if [ -f .buildozer/logs/buildozer.log ]; then
+            echo "=== Buildozer Log ==="
+            tail -50 .buildozer/logs/buildozer.log
+            echo "==================="
+          fi
+          exit 1
+        }
+        
+        echo "Release APK build completed successfully"
     
     - name: List generated files
       run: |
