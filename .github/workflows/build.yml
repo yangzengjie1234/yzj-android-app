@@ -48,11 +48,27 @@ jobs:
     
     - name: Install system dependencies
       run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          git zip unzip openjdk-8-jdk python3-pip autoconf libtool pkg-config \
-          zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake \
-          libffi-dev libssl-dev libltdl-dev libfuse2
+        # Update package lists with retry mechanism
+        sudo apt-get update || (sleep 30 && sudo apt-get update)
+        
+        # Install dependencies in smaller groups to identify issues
+        echo "Installing basic tools..."
+        sudo apt-get install -y git zip unzip python3-pip
+        
+        echo "Installing Java and build tools..."
+        sudo apt-get install -y openjdk-8-jdk autoconf libtool pkg-config cmake
+        
+        echo "Installing development libraries..."
+        sudo apt-get install -y zlib1g-dev libncurses5-dev libncursesw5-dev \
+          libffi-dev libssl-dev libltdl-dev
+        
+        echo "Installing additional dependencies..."
+        sudo apt-get install -y libtinfo5 || echo "libtinfo5 not available, continuing..."
+        sudo apt-get install -y libfuse2 || echo "libfuse2 not available, continuing..."
+        
+        # Verify Java installation
+        java -version
+        echo "System dependencies installation completed successfully"
     
     - name: Install Python dependencies
       run: |
