@@ -107,7 +107,7 @@ jobs:
     
     - name: Upload Debug APK
       if: github.event.inputs.build_type == 'debug' || github.event.inputs.build_type == ''
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: android-debug-apk
         path: bin/*-debug.apk
@@ -115,7 +115,7 @@ jobs:
     
     - name: Upload Release APK
       if: github.event.inputs.build_type == 'release'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: android-release-apk
         path: bin/*-release*.apk
